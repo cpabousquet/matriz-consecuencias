@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="theme-color" content="#D81818" />
+<title>Administrar Matriz</title>
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --oxxo-red:#D81818; --oxxo-amber:#FCC024;
+    --orange:#FC8503; --orange-lt:#FFF4E8;
+    --amber:#FFB300; --green:#27AE60; --red:#E53935;
+    --gray-h:#525252; --gray-d:#6B6B6B; --gray-m:#9E9E9E;
+    --gray-l:#D4D4D4; --gray-xl:#EEEEEE; --gray-xxl:#F8F8F8; --white:#FFFFFF;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0; padding:0; background:var(--gray-xxl);}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; color:var(--gray-h); line-height:1.45;}
+  header.app{background:var(--oxxo-red); color:var(--white); padding:16px; border-bottom:4px solid var(--oxxo-amber);}
+  header.app .inner{max-width:820px; margin:0 auto; display:flex; align-items:center; gap:12px;}
+  header.app h1{font-size:17px; margin:0; font-weight:800;}
+  header.app .sub{font-size:11.5px; color:#FFE0B8; margin-top:2px;}
+  header.app a{margin-left:auto; color:var(--white); font-size:12px; font-weight:700; text-decoration:none;
+    border:1.5px solid rgba(255,255,255,.6); border-radius:999px; padding:6px 12px; white-space:nowrap;}
+  .wrap{max-width:820px; margin:0 auto; padding:18px 16px 60px;}
+  .view{display:none;} .view.on{display:block;}
+  .card{background:var(--white); border:1px solid var(--gray-l); border-radius:14px; padding:18px; margin-bottom:14px;}
+  .card h2{font-size:15px; margin:0 0 4px; color:var(--gray-h);}
+  .card p.lead{font-size:13px; color:var(--gray-d); margin:0 0 14px;}
+  label{display:block; font-size:11px; font-weight:800; color:var(--orange); text-transform:uppercase; letter-spacing:.5px; margin:12px 0 5px;}
+  input[type=text], input[type=password]{width:100%; font-size:15px; padding:11px 12px; border:1.5px solid var(--gray-l); border-radius:10px; background:var(--white); color:var(--gray-h); outline:0;}
+  input:focus{border-color:var(--orange);}
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:0 12px;}
+  @media (max-width:560px){ .row2{grid-template-columns:1fr;} }
+  .help{font-size:11.5px; color:var(--gray-m); margin-top:4px;}
+  .help a{color:var(--orange);}
+  .btns{display:flex; flex-wrap:wrap; gap:10px; margin-top:16px;}
+  button{font:inherit; cursor:pointer;}
+  .btn{border:0; background:var(--orange); color:var(--white); font-weight:700; border-radius:12px; padding:11px 18px; font-size:14px;}
+  .btn:disabled{background:var(--gray-l); color:var(--gray-m); cursor:not-allowed;}
+  .btn.sec{background:var(--white); color:var(--orange); border:1.5px solid var(--orange);}
+  .btn.ghost{background:transparent; color:var(--gray-d); border:1.5px solid var(--gray-l);}
+  .msg{font-size:13px; border-radius:10px; padding:10px 12px; margin-top:12px; display:none;}
+  .msg.on{display:block;}
+  .msg.err{background:#FDECEC; color:#B71C1C; border:1px solid #F5C2C2;}
+  .msg.ok{background:#E8F6EE; color:#1B6B3D; border:1px solid #BFE5CD;}
+  .msg.info{background:var(--orange-lt); color:var(--gray-h); border:1px solid #FFE0B8;}
+  .stats{display:flex; flex-wrap:wrap; gap:10px; margin:6px 0 2px;}
+  .stat{flex:1 1 140px; background:var(--gray-xxl); border-radius:10px; padding:10px 12px;}
+  .stat .n{font-size:20px; font-weight:800; color:var(--gray-h);}
+  .stat .l{font-size:11px; color:var(--gray-m); text-transform:uppercase; letter-spacing:.4px;}
+  .drop{border:2px dashed var(--gray-l); border-radius:14px; padding:26px 16px; text-align:center; color:var(--gray-d); font-size:13.5px; cursor:pointer; transition:all .12s;}
+  .drop:hover, .drop.over{border-color:var(--orange); background:var(--orange-lt);}
+  .drop b{color:var(--orange);}
+  .issues{margin:10px 0 0; padding:0; list-style:none; max-height:220px; overflow:auto;}
+  .issues li{font-size:12.5px; padding:5px 0; border-bottom:1px solid var(--gray-xl);}
+  .issues li.e::before{content:"✕ "; color:var(--red); font-weight:800;}
+  .issues li.w::before{content:"! "; color:var(--amber); font-weight:800;}
+  .diff{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;}
+  .pill{font-size:12px; font-weight:700; border-radius:999px; padding:4px 10px; background:var(--gray-xl);}
+  .pill.add{background:#E8F6EE; color:#1B6B3D;} .pill.del{background:#FDECEC; color:#B71C1C;} .pill.mod{background:var(--orange-lt); color:#A85600;}
+  .tablewrap{overflow-x:auto; margin-top:12px; border:1px solid var(--gray-xl); border-radius:10px;}
+  table{border-collapse:collapse; width:100%; font-size:12.5px;}
+  th, td{text-align:left; padding:8px 10px; border-bottom:1px solid var(--gray-xl); vertical-align:top;}
+  th{background:var(--gray-xxl); font-size:11px; text-transform:uppercase; letter-spacing:.4px; color:var(--gray-m); position:sticky; top:0;}
+  tr.bad td{background:#FFF6F6;}
+  .badge{display:inline-block; font-size:10px; font-weight:800; color:var(--white); border-radius:6px; padding:2px 7px;}
+  .tag{font-size:10.5px; font-weight:700; border-radius:5px; padding:1px 6px;}
+  .tag.add{background:#E8F6EE; color:#1B6B3D;} .tag.mod{background:var(--orange-lt); color:#A85600;}
+  details summary{cursor:pointer; font-size:13px; font-weight:700; color:var(--gray-d); margin-top:12px;}
+  .spin{display:inline-block; width:14px; height:14px; border:2px solid rgba(255,255,255,.5); border-top-color:var(--white); border-radius:50%; animation:sp .7s linear infinite; vertical-align:-2px; margin-right:6px;}
+  @keyframes sp{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+
+<header class="app">
+  <div class="inner">
+    <div>
+      <h1>Administrar Matriz de Consecuencias</h1>
+      <div class="sub">Acceso restringido · carga de Excel</div>
+    </div>
+    <a href="./">Ver app →</a>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- Cargando -->
+  <div class="view on" id="vLoading"><div class="card"><p class="lead">Cargando…</p></div></div>
+
+  <!-- Configuración inicial / reconfiguración -->
+  <div class="view" id="vSetup">
+    <div class="card">
+      <h2 id="setupTitle">Configuración inicial</h2>
+      <p class="lead" id="setupLead">Se hace una sola vez. Define la contraseña de administrador y conecta la app con GitHub
+        para que pueda publicar los cambios. El token queda guardado <b>cifrado con tu contraseña</b>; sin ella no sirve.</p>
+
+      <label for="sToken">Token de GitHub (fine-grained)</label>
+      <input id="sToken" type="password" autocomplete="off" placeholder="github_pat_…" />
+      <div class="help">Créalo en <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">GitHub → Settings → Fine-grained tokens</a>:
+        <i>Repository access</i> = solo este repositorio · <i>Permissions → Contents</i> = <b>Read and write</b>.</div>
+
+      <div class="row2">
+        <div><label for="sOwner">Usuario / organización</label><input id="sOwner" type="text" autocomplete="off" /></div>
+        <div><label for="sRepo">Repositorio</label><input id="sRepo" type="text" autocomplete="off" /></div>
+      </div>
+      <label for="sBranch">Rama</label>
+      <input id="sBranch" type="text" value="main" autocomplete="off" />
+
+      <div class="row2">
+        <div><label for="sPass">Contraseña de administrador</label><input id="sPass" type="password" autocomplete="new-password" /></div>
+        <div><label for="sPass2">Repetir contraseña</label><input id="sPass2" type="password" autocomplete="new-password" /></div>
+      </div>
+      <div class="help">Mínimo 12 caracteres. Usa una frase larga: es lo único que protege el acceso.</div>
+
+      <div class="btns">
+        <button class="btn" id="sGo">Guardar configuración</button>
+        <button class="btn ghost" id="sCancel" style="display:none">Cancelar</button>
+      </div>
+      <div class="msg" id="sMsg"></div>
+    </div>
+  </div>
+
+  <!-- Login -->
+  <div class="view" id="vLogin">
+    <div class="card" style="max-width:420px; margin:30px auto;">
+      <h2>Ingreso administrador</h2>
+      <p class="lead">Ingresa la contraseña para cargar una nueva versión de la matriz.</p>
+      <label for="lPass">Contraseña</label>
+      <input id="lPass" type="password" autocomplete="current-password" />
+      <div class="btns"><button class="btn" id="lGo">Ingresar</button></div>
+      <div class="msg" id="lMsg"></div>
+    </div>
+  </div>
+
+  <!-- Panel -->
+  <div class="view" id="vPanel">
+    <div class="card">
+      <h2>Matriz publicada</h2>
+      <div class="stats">
+        <div class="stat"><div class="n" id="stN">–</div><div class="l">Escenarios</div></div>
+        <div class="stat"><div class="n" id="stC">–</div><div class="l">Categorías</div></div>
+        <div class="stat"><div class="n" id="stF" style="font-size:14px; padding-top:5px">–</div><div class="l">Última actualización</div></div>
+      </div>
+      <div class="btns">
+        <button class="btn sec" id="pDownload">⬇ Descargar Excel actual</button>
+      </div>
+      <div class="help">Descarga la matriz vigente, edítala en Excel y vuelve a cargarla aquí. Ese mismo archivo sirve de plantilla.</div>
+    </div>
+
+    <div class="card">
+      <h2>Cargar nueva versión</h2>
+      <p class="lead">Sube un Excel (.xlsx) con las mismas columnas. Antes de publicar verás qué cambia y si hay errores.</p>
+      <input id="pFile" type="file" accept=".xlsx,.xls,.csv" hidden />
+      <div class="drop" id="pDrop">Arrastra el Excel aquí o <b>haz clic para elegirlo</b></div>
+
+      <div id="pResult" style="display:none">
+        <div class="msg on" id="pSummary"></div>
+        <ul class="issues" id="pIssues"></ul>
+        <div class="diff" id="pDiff"></div>
+        <details id="pPreviewWrap"><summary>Vista previa (<span id="pCount">0</span> escenarios)</summary>
+          <div class="tablewrap"><table><thead><tr><th>#</th><th>Categoría</th><th>Escenario</th><th>Gravedad</th><th>Consecuencia</th></tr></thead><tbody id="pPreview"></tbody></table></div>
+        </details>
+
+        <label for="pName">Tu nombre (queda registrado en el historial)</label>
+        <input id="pName" type="text" autocomplete="name" />
+        <div class="btns">
+          <button class="btn" id="pPublish" disabled>Publicar en la app</button>
+          <button class="btn ghost" id="pReset">Descartar</button>
+        </div>
+      </div>
+      <div class="msg" id="pMsg"></div>
+    </div>
+
+    <div class="card">
+      <h2>Seguridad</h2>
+      <p class="lead">Cambia la contraseña o renueva el token de GitHub cuando expire. Todas las versiones anteriores de la matriz quedan guardadas en el historial del repositorio.</p>
+      <div class="btns">
+        <button class="btn ghost" id="pReconfig">Cambiar contraseña / token</button>
+        <button class="btn ghost" id="pLogout">Cerrar sesión</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ===================== Columnas del Excel ↔ campos de data.json ===================== */
+const COLS = [
+  {k:"cat",  h:"Categoría",                    req:true, al:["categoria"]},
+  {k:"esc",  h:"Escenario",                    req:true, al:["escenario","situacion","falta"]},
+  {k:"grav", h:"Gravedad",                     req:true, al:["gravedad","nivel"]},
+  {k:"cons", h:"Consecuencia recomendada",     req:true, al:["consecuencia"]},
+  {k:"ant",  h:"Antecedentes a recopilar",               al:["antecedentes"]},
+  {k:"acc1", h:"Acción 1ª ocurrencia",                   al:["1 ocurrencia","primera","accion 1"]},
+  {k:"accR", h:"Acción si reincide",                     al:["reincide","reincidencia"]},
+  {k:"rrll", h:"¿Cuándo escalar a RR.LL.?",              al:["escalar","rr ll","rrll"]},
+  {k:"fund", h:"Fundamento legal / normativo",           al:["fundamento","normativo","legal"]},
+  {k:"tags", h:"Palabras clave (buscador)",              al:["palabras clave","claves","tags"]},
+];
+const GRAV = {"baja":"Baja", "media":"Media", "alta":"Alta", "critica":"Crítica"};
+const SEV_C = {"Baja":"#27AE60", "Media":"#FFB300", "Alta":"#FC8503", "Crítica":"#E53935"};
+const CONFIG_PATH = "admin-config.json";
+const DATA_PATH = "data.json";
+const PBKDF2_ITER = 600000;
+
+/* ===================== Utilidades ===================== */
+const $ = id => document.getElementById(id);
+const enc = new TextEncoder(), dec = new TextDecoder();
+function normalize(s){
+  return String(s ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"")
+    .replace(/[^a-z0-9ñ\s]/g," ").replace(/\s+/g," ").trim();
+}
+function escapeHtml(s){
+  return String(s ?? "").replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function u8ToB64(u8){
+  let bin = "";
+  for(let i=0; i<u8.length; i+=0x8000) bin += String.fromCharCode.apply(null, u8.subarray(i, i+0x8000));
+  return btoa(bin);
+}
+const b64ToU8 = b64 => Uint8Array.from(atob(b64.replace(/\s/g,"")), c=>c.charCodeAt(0));
+function show(view){ document.querySelectorAll(".view").forEach(v=>v.classList.toggle("on", v.id===view)); }
+function msg(id, text, kind="err"){ const el=$(id); el.className = "msg on " + kind; el.innerHTML = text; }
+function clearMsg(id){ $(id).className = "msg"; }
+function busy(btn, on, label){
+  if(on){ btn.dataset.label = btn.textContent; btn.innerHTML = `<span class="spin"></span>${label}`; btn.disabled = true; }
+  else { btn.textContent = btn.dataset.label; btn.disabled = false; }
+}
+function fmtDate(iso){
+  if(!iso) return "–";
+  return new Date(iso).toLocaleString("es-CL", {day:"numeric", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit"});
+}
+
+/* ===================== Cifrado del token (PBKDF2 + AES-GCM) ===================== */
+async function deriveKey(pass, salt, iter){
+  const base = await crypto.subtle.importKey("raw", enc.encode(pass), "PBKDF2", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey({name:"PBKDF2", salt, iterations:iter, hash:"SHA-256"},
+    base, {name:"AES-GCM", length:256}, false, ["encrypt","decrypt"]);
+}
+async function encryptConfig(secret, pass){
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await deriveKey(pass, salt, PBKDF2_ITER);
+  const ct = new Uint8Array(await crypto.subtle.encrypt({name:"AES-GCM", iv}, key, enc.encode(JSON.stringify(secret))));
+  return {v:1, kdf:"PBKDF2-SHA256", iter:PBKDF2_ITER, salt:u8ToB64(salt), iv:u8ToB64(iv), ct:u8ToB64(ct)};
+}
+async function decryptConfig(cfg, pass){
+  const key = await deriveKey(pass, b64ToU8(cfg.salt), cfg.iter);
+  const pt = await crypto.subtle.decrypt({name:"AES-GCM", iv:b64ToU8(cfg.iv)}, key, b64ToU8(cfg.ct));
+  return JSON.parse(dec.decode(pt));
+}
+
+/* ===================== GitHub API ===================== */
+let S = null;          // sesión: {token, owner, repo, branch} — solo en memoria
+let CONFIG = null;     // admin-config.json publicado (cifrado)
+let CURRENT = null;    // {sha, doc} de data.json
+let PENDING = null;    // escenarios validados listos para publicar
+
+async function gh(path, opts={}, sess=S){
+  const res = await fetch("https://api.github.com" + path, {
+    ...opts,
+    headers: {
+      "Authorization": `Bearer ${sess.token}`,
+      "Accept": "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28",
+      ...(opts.body ? {"Content-Type":"application/json"} : {}),
+    },
+  });
+  if(res.status === 404 && opts.allow404) return null;
+  if(!res.ok){
+    let detail = ""; try{ detail = (await res.json()).message || ""; }catch(_){}
+    const e = new Error(detail || res.statusText); e.status = res.status; throw e;
+  }
+  return res.status === 204 ? null : res.json();
+}
+async function getFile(path, sess=S){
+  const j = await gh(`/repos/${sess.owner}/${sess.repo}/contents/${path}?ref=${encodeURIComponent(sess.branch)}`, {allow404:true}, sess);
+  if(!j) return null;
+  return {sha:j.sha, text:dec.decode(b64ToU8(j.content))};
+}
+async function putFile(path, text, message, sha, sess=S){
+  return gh(`/repos/${sess.owner}/${sess.repo}/contents/${path}`, {
+    method:"PUT",
+    body: JSON.stringify({message, content:u8ToB64(enc.encode(text)), branch:sess.branch, ...(sha ? {sha} : {})}),
+  }, sess);
+}
+function ghError(e){
+  if(e.status === 401) return "El token de GitHub no es válido o expiró. Usa <b>Cambiar contraseña / token</b> para renovarlo.";
+  if(e.status === 403) return "El token no tiene permiso de escritura (Contents: Read and write) sobre este repositorio.";
+  if(e.status === 404) return "No se encontró el repositorio o la rama. Revisa usuario, repositorio y rama.";
+  if(e.status === 409) return "La matriz cambió mientras trabajabas (otra publicación). Recarga la página y vuelve a cargar el Excel.";
+  return "Error de GitHub: " + escapeHtml(e.message);
+}
+
+/* ===================== Inicio ===================== */
+async function boot(){
+  try{
+    const res = await fetch(`${CONFIG_PATH}?t=${Date.now()}`, {cache:"no-store"});
+    if(res.ok){ CONFIG = await res.json(); show("vLogin"); $("lPass").focus(); return; }
+  }catch(_){}
+  openSetup(false);
+}
+
+/* ---- Configuración ---- */
+function openSetup(reconfig){
+  const m = location.hostname.match(/^([^.]+)\.github\.io$/i);
+  $("sOwner").value = S?.owner || (m ? m[1] : "");
+  $("sRepo").value  = S?.repo  || (m ? location.pathname.split("/")[1] : "");
+  $("sBranch").value = S?.branch || "main";
+  $("sToken").value = ""; $("sPass").value = ""; $("sPass2").value = "";
+  $("setupTitle").textContent = reconfig ? "Cambiar contraseña / token" : "Configuración inicial";
+  $("sToken").placeholder = reconfig ? "Deja vacío para mantener el token actual" : "github_pat_…";
+  $("sCancel").style.display = reconfig ? "" : "none";
+  clearMsg("sMsg");
+  show("vSetup");
+}
+$("sCancel").onclick = ()=> show("vPanel");
+$("sGo").onclick = async ()=>{
+  const reconfig = !!S;
+  const sess = {
+    token: $("sToken").value.trim() || (reconfig ? S.token : ""),
+    owner: $("sOwner").value.trim(), repo: $("sRepo").value.trim(), branch: $("sBranch").value.trim() || "main",
+  };
+  const pass = $("sPass").value, pass2 = $("sPass2").value;
+  if(!sess.token || !sess.owner || !sess.repo) return msg("sMsg", "Completa token, usuario y repositorio.");
+  if(pass.length < 12) return msg("sMsg", "La contraseña debe tener al menos 12 caracteres.");
+  if(pass !== pass2) return msg("sMsg", "Las contraseñas no coinciden.");
+
+  const btn = $("sGo"); busy(btn, true, "Guardando…");
+  try{
+    const existing = await getFile(CONFIG_PATH, sess);
+    const cfg = await encryptConfig(sess, pass);
+    await putFile(CONFIG_PATH, JSON.stringify(cfg, null, 2) + "\n",
+      reconfig ? "Admin: actualiza credenciales" : "Admin: configuración inicial", existing?.sha, sess);
+    CONFIG = cfg; S = sess;
+    await openPanel();
+    msg("pMsg", "Configuración guardada. Desde ahora se ingresa con la nueva contraseña.", "ok");
+  }catch(e){
+    msg("sMsg", e.status ? ghError(e) : "No se pudo guardar: " + escapeHtml(e.message));
+  }finally{ busy(btn, false); }
+};
+
+/* ---- Login ---- */
+async function login(){
+  const pass = $("lPass").value;
+  if(!pass) return;
+  const btn = $("lGo"); busy(btn, true, "Verificando…"); clearMsg("lMsg");
+  try{
+    S = await decryptConfig(CONFIG, pass);
+  }catch(_){
+    busy(btn, false); S = null;
+    return msg("lMsg", "Contraseña incorrecta.");
+  }
+  try{ await openPanel(); }
+  catch(e){ msg("lMsg", e.status ? ghError(e) : escapeHtml(e.message)); S = null; }
+  finally{ busy(btn, false); $("lPass").value = ""; }
+}
+$("lGo").onclick = login;
+$("lPass").addEventListener("keydown", e=>{ if(e.key==="Enter") login(); });
+
+/* ---- Panel ---- */
+async function openPanel(){
+  const f = await getFile(DATA_PATH);
+  const doc = f ? JSON.parse(f.text) : {version:0, escenarios:[]};
+  CURRENT = {sha:f?.sha, doc};
+  const list = doc.escenarios || [];
+  $("stN").textContent = list.length;
+  $("stC").textContent = new Set(list.map(d=>d.cat)).size;
+  $("stF").innerHTML = `${fmtDate(doc.actualizado)}${doc.actualizadoPor ? `<br><span style="font-weight:400;color:var(--gray-m)">por ${escapeHtml(doc.actualizadoPor)}</span>` : ""}`;
+  resetUpload();
+  show("vPanel");
+}
+$("pLogout").onclick = ()=>{ S = null; CURRENT = null; PENDING = null; show("vLogin"); };
+$("pReconfig").onclick = ()=> openSetup(true);
+
+/* ---- Descargar Excel actual ---- */
+$("pDownload").onclick = ()=>{
+  const rows = (CURRENT?.doc.escenarios || []).map(d=> COLS.map(c=> d[c.k] ?? ""));
+  const ws = XLSX.utils.aoa_to_sheet([COLS.map(c=>c.h), ...rows]);
+  ws["!cols"] = [{wch:24},{wch:40},{wch:10},{wch:50},{wch:45},{wch:35},{wch:40},{wch:30},{wch:50},{wch:50}];
+  ws["!autofilter"] = {ref: ws["!ref"]};
+  const help = XLSX.utils.aoa_to_sheet([
+    ["Cómo usar este Excel"],
+    [""],
+    ["1. Edita solo la hoja \"Matriz\". Cada fila es un escenario."],
+    ["2. No cambies los títulos de las columnas."],
+    ["3. Obligatorias: Categoría, Escenario, Gravedad y Consecuencia recomendada."],
+    ["4. Gravedad debe ser: Baja, Media, Alta o Crítica."],
+    ["5. El Escenario no se puede repetir (es el identificador de cada fila)."],
+    ["6. Palabras clave: términos que la gente escribiría en el buscador, separados por espacio."],
+    ["7. Guarda como .xlsx y cárgalo en el panel de administración."],
+  ]);
+  help["!cols"] = [{wch:90}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Matriz");
+  XLSX.utils.book_append_sheet(wb, help, "Instrucciones");
+  const stamp = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `matriz-consecuencias-${stamp}.xlsx`);
+};
+
+/* ---- Cargar Excel ---- */
+const drop = $("pDrop"), fileIn = $("pFile");
+drop.onclick = ()=> fileIn.click();
+drop.addEventListener("dragover", e=>{ e.preventDefault(); drop.classList.add("over"); });
+drop.addEventListener("dragleave", ()=> drop.classList.remove("over"));
+drop.addEventListener("drop", e=>{ e.preventDefault(); drop.classList.remove("over"); if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+fileIn.onchange = ()=>{ if(fileIn.files[0]) handleFile(fileIn.files[0]); };
+$("pReset").onclick = resetUpload;
+
+function resetUpload(){
+  PENDING = null; fileIn.value = "";
+  $("pResult").style.display = "none"; drop.style.display = "";
+  $("pPublish").disabled = true; clearMsg("pMsg");
+}
+
+function mapHeaders(headerRow){
+  const norm = headerRow.map(normalize);
+  const map = {};
+  // 1º coincidencia exacta con el título oficial, 2º por palabra clave
+  COLS.forEach(c=>{ const i = norm.indexOf(normalize(c.h)); if(i>=0) map[c.k] = i; });
+  COLS.forEach(c=>{
+    if(map[c.k] !== undefined) return;
+    const used = new Set(Object.values(map));
+    const i = norm.findIndex((h,idx)=> h && !used.has(idx) && c.al.some(a=> h.includes(a)));
+    if(i>=0) map[c.k] = i;
+  });
+  return map;
+}
+
+function parseRows(rows){
+  const errors = [], warnings = [];
+  // La fila de títulos puede no ser la primera (buscar en las 10 primeras)
+  let hIdx = -1, map = null;
+  for(let i=0; i<Math.min(rows.length, 10); i++){
+    const m = mapHeaders(rows[i]);
+    if(Object.keys(m).length >= 3){ hIdx = i; map = m; break; }
+  }
+  if(hIdx < 0) return {errors:["No se encontró la fila de títulos. Usa el Excel descargado desde este panel como plantilla."], warnings, items:[]};
+  COLS.filter(c=>c.req && map[c.k]===undefined).forEach(c=> errors.push(`Falta la columna obligatoria "${c.h}".`));
+  COLS.filter(c=>!c.req && map[c.k]===undefined).forEach(c=> warnings.push(`No se encontró la columna "${c.h}"; quedará vacía.`));
+  if(errors.length) return {errors, warnings, items:[]};
+
+  const items = [], seen = new Map();
+  for(let i=hIdx+1; i<rows.length; i++){
+    const r = rows[i], n = i+1;       // n = número de fila en Excel
+    const d = {};
+    COLS.forEach(c=>{ d[c.k] = map[c.k]===undefined ? "" : String(r[map[c.k]] ?? "").replace(/\s+/g," ").trim(); });
+    if(COLS.every(c=>!d[c.k])) continue;   // fila vacía
+    const rowErr = [];
+    COLS.filter(c=>c.req && !d[c.k]).forEach(c=> rowErr.push(`falta "${c.h}"`));
+    if(d.grav){
+      const g = GRAV[normalize(d.grav)];
+      if(g) d.grav = g; else rowErr.push(`gravedad "${d.grav}" no válida (usa Baja, Media, Alta o Crítica)`);
+    }
+    if(d.esc){
+      const k = normalize(d.esc);
+      if(seen.has(k)) rowErr.push(`escenario repetido (igual al de la fila ${seen.get(k)})`);
+      else seen.set(k, n);
+    }
+    ["ant","acc1","accR","rrll","fund"].forEach(k=>{ if(!d[k]) d[k] = "—"; });
+    if(!d.tags) warnings.push(`Fila ${n}: sin palabras clave; el buscador la encontrará solo por su título y categoría.`);
+    rowErr.forEach(e=> errors.push(`Fila ${n}: ${e}.`));
+    d._row = n; d._bad = rowErr.length > 0;
+    items.push(d);
+  }
+  if(!items.length) errors.push("El Excel no tiene escenarios (filas con datos bajo los títulos).");
+  return {errors, warnings, items};
+}
+
+function diff(oldList, newList){
+  const fields = COLS.map(c=>c.k);
+  const oldMap = new Map(oldList.map(d=>[normalize(d.esc), d]));
+  const newKeys = new Set(newList.map(d=>normalize(d.esc)));
+  let add=0, mod=0, same=0;
+  newList.forEach(d=>{
+    const o = oldMap.get(normalize(d.esc));
+    if(!o){ add++; d._st = "add"; }
+    else if(fields.some(f=> String(o[f] ?? "") !== String(d[f] ?? ""))){ mod++; d._st = "mod"; }
+    else { same++; d._st = ""; }
+  });
+  const del = oldList.filter(d=>!newKeys.has(normalize(d.esc)));
+  return {add, mod, same, del};
+}
+
+async function handleFile(file){
+  clearMsg("pMsg");
+  let rows;
+  try{
+    const wb = XLSX.read(await file.arrayBuffer(), {type:"array"});
+    const name = wb.SheetNames.find(n=>normalize(n)==="matriz") || wb.SheetNames[0];
+    rows = XLSX.utils.sheet_to_json(wb.Sheets[name], {header:1, defval:"", raw:false});
+  }catch(e){
+    return msg("pMsg", "No se pudo leer el archivo. Asegúrate de que sea un Excel (.xlsx).");
+  }
+  const {errors, warnings, items} = parseRows(rows);
+  const ok = errors.length === 0;
+
+  $("pSummary").className = "msg on " + (ok ? "ok" : "err");
+  $("pSummary").innerHTML = ok
+    ? `<b>${escapeHtml(file.name)}</b>: ${items.length} escenarios válidos, listos para publicar.`
+    : `<b>${escapeHtml(file.name)}</b>: hay ${errors.length} error(es). Corrígelos en el Excel y vuelve a cargarlo.`;
+  $("pIssues").innerHTML = [...errors.map(e=>`<li class="e">${escapeHtml(e)}</li>`), ...warnings.map(w=>`<li class="w">${escapeHtml(w)}</li>`)].join("");
+
+  if(ok){
+    const dd = diff(CURRENT.doc.escenarios || [], items);
+    $("pDiff").innerHTML =
+      `<span class="pill add">+${dd.add} nuevos</span><span class="pill mod">~${dd.mod} modificados</span>` +
+      `<span class="pill del">−${dd.del.length} eliminados</span><span class="pill">${dd.same} sin cambios</span>` +
+      (dd.del.length ? `<div class="help" style="width:100%">Se eliminarán: ${dd.del.map(d=>escapeHtml(d.esc)).join(" · ")}</div>` : "");
+    PENDING = {items, dd};
+  } else {
+    $("pDiff").innerHTML = ""; PENDING = null;
+  }
+
+  $("pCount").textContent = items.length;
+  $("pPreview").innerHTML = items.map(d=>`<tr class="${d._bad ? "bad" : ""}">
+      <td>${d._row}</td><td>${escapeHtml(d.cat)}</td>
+      <td>${escapeHtml(d.esc)} ${d._st ? `<span class="tag ${d._st}">${d._st==="add" ? "nuevo" : "modif."}</span>` : ""}</td>
+      <td>${SEV_C[d.grav] ? `<span class="badge" style="background:${SEV_C[d.grav]}">${d.grav.toUpperCase()}</span>` : escapeHtml(d.grav)}</td>
+      <td>${escapeHtml(d.cons)}</td></tr>`).join("");
+  $("pPreviewWrap").open = !ok;
+  $("pResult").style.display = ""; drop.style.display = "none";
+  $("pPublish").disabled = !ok || (PENDING && PENDING.dd.add + PENDING.dd.mod + PENDING.dd.del.length === 0);
+  if(ok && $("pPublish").disabled) msg("pMsg", "El Excel es idéntico a la matriz publicada; no hay nada que publicar.", "info");
+}
+
+/* ---- Publicar ---- */
+$("pPublish").onclick = async ()=>{
+  if(!PENDING) return;
+  const who = $("pName").value.trim() || "Administrador";
+  const escenarios = PENDING.items.map(d=>{ const o = {}; COLS.forEach(c=> o[c.k] = d[c.k]); return o; });
+  const doc = {
+    version: (CURRENT.doc.version || 0) + 1,
+    actualizado: new Date().toISOString(),
+    actualizadoPor: who,
+    escenarios,
+  };
+  const {add, mod, del} = PENDING.dd;
+  const message = `Matriz v${doc.version}: ${escenarios.length} escenarios (+${add} ~${mod} −${del.length}) — ${who}`;
+  const btn = $("pPublish"); busy(btn, true, "Publicando…");
+  try{
+    await putFile(DATA_PATH, JSON.stringify(doc, null, 2) + "\n", message, CURRENT.sha);
+    busy(btn, false);
+    await openPanel();
+    msg("pMsg", `✓ Publicada la versión ${doc.version}. La app la mostrará en 1–2 minutos
+      (lo que tarda GitHub Pages en actualizar). Los teléfonos la reciben al abrir la app con internet.`, "ok");
+  }catch(e){
+    busy(btn, false);
+    msg("pMsg", e.status ? ghError(e) : "No se pudo publicar: " + escapeHtml(e.message));
+  }
+};
+
+boot();
+</script>
+</body>
+</html>
